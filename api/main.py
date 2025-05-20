@@ -29,37 +29,46 @@ s3 = boto3.client(
     aws_access_key_id= os.getenv("AWS_ACCESS_KEY"),
     aws_secret_access_key= os.getenv("AWS_SECRET_KEY"))
 
-bucket_name = 'YOUR_BUCKET_NAME' # Add your bucket name here
+bucket_name = os.getenv("S3_BUCKET_NAME")  # Changed from bucket_name = os.getenv("S3_BUCKET_NAME"),
 
 @app.post("/generate-qr/")
 async def generate_qr(url: str):
-    # Generate QR Code
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(url)
-    qr.make(fit=True)
-
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Save QR Code to BytesIO object
-    img_byte_arr = BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
-
-    # Generate file name for S3
-    file_name = f"qr_codes/{url.split('//')[-1]}.png"
-
     try:
+        # Add some logging for debugging
+        print(f"Received URL: {url}")
+        print(f"Using bucket: {bucket_name}")
+        
+        # Generate QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(url)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Save QR Code to BytesIO object
+        img_byte_arr = BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+
+        # Generate file name for S3
+        file_name = f"qr_codes/{url.replace('/', '_')}.png"
+
         # Upload to S3
-        s3.put_object(Bucket=bucket_name, Key=file_name, Body=img_byte_arr, ContentType='image/png', ACL='public-read')
+        s3.put_object(
+            Bucket=bucket_name, 
+            Key=file_name, 
+            Body=img_byte_arr, 
+            ContentType='image/png'
+        )
         
         # Generate the S3 URL
         s3_url = f"https://{bucket_name}.s3.amazonaws.com/{file_name}"
         return {"qr_code_url": s3_url}
     except Exception as e:
+        print(f"Error: {str(e)}")  # Add error logging
         raise HTTPException(status_code=500, detail=str(e))
-    

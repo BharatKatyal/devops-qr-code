@@ -1,0 +1,12 @@
+# SAM build directory
+.aws-sam/
+
+# SAM configuration
+samconfig.toml
+
+# SAM local API testing
+sam-local/
+
+# Possible local testing artifacts
+*.zip
+build/

@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for S3 bucket and IAM policy'
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket to create
+    Default: 'my-qr-code-bucket232'
+
+Resources:
+  QRCodeBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration:
+        Status: Enabled
+
+  QRCodeBucketPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: Policy for accessing QR code bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !GetAtt QRCodeBucket.Arn
+              - !Join
+                - ''
+                - - !GetAtt QRCodeBucket.Arn
+                  - '/*'
+  BucketPublicReadPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref QRCodeBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - !GetAtt QRCodeBucket.Arn
+                - '/*'
+Outputs:
+  BucketName:
+    Description: Name of the created S3 bucket
+    Value: !Ref QRCodeBucket
+  BucketArn:
+    Description: ARN of the created S3 bucket
+    Value: !GetAtt QRCodeBucket.Arn
+  PolicyArn:
+    Description: ARN of the created IAM policy
+    Value: !Ref QRCodeBucketPolicy
